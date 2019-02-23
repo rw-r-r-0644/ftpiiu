@@ -31,6 +31,8 @@ void console_printf(const char *format, ...)
 		WHBLogConsoleDraw();
 	}
 	va_end(va);
+	
+	free(tmp);
 }
 
 /* Entry point */

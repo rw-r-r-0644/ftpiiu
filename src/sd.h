@@ -1,5 +1,5 @@
-/****************************************************************************
- * Copyright (C) 2015
+/***************************************************************************
+ * Copyright (C) 2019
  * by Dimok
  *
  * This software is provided 'as-is', without any express or implied
@@ -21,22 +21,19 @@
  * 3. This notice may not be removed or altered from any source
  * distribution.
  ***************************************************************************/
-#ifndef __SYS_FUNCTIONS_H_
-#define __SYS_FUNCTIONS_H_
+#ifndef __SD_DEVOPTAB_H_
+#define __SD_DEVOPTAB_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void InitSysFunctionPointers(void);
-
-extern void(*_SYSLaunchTitleByPathFromLauncher)(const char* path, int len, int zero);
-extern int (* SYSRelaunchTitle)(int argc, char* argv);
-extern int (* SYSLaunchMenu)(void);
-
+int mount_sd(const char *path);
+int unmount_sd(const char *path);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __SYS_FUNCTIONS_H_
+#endif // __SD_DEVOPTAB_H_
+

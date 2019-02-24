@@ -12,7 +12,6 @@
 #include <whb/proc.h>
 #include <whb/log_console.h>
 #include <whb/log.h>
-#include "sd.h"
 #include "ftp.h"
 #include "virtualpath.h"
 #include "net.h"
@@ -42,7 +41,6 @@ int main()
 	WHBLogConsoleInit();
 
 	initialise_network();
-	mount_sd("sd");
 	MountVirtualDevices();
 
     console_printf("FTPiiU v0.5 is listening on %u.%u.%u.%u:%i", (network_gethostip() >> 24) & 0xFF, (network_gethostip() >> 16) & 0xFF, (network_gethostip() >> 8) & 0xFF, (network_gethostip() >> 0) & 0xFF, PORT);
@@ -63,7 +61,6 @@ int main()
         network_close(serverSocket);
 
 	UnmountVirtualPaths();
-	unmount_sd("sd");
 	finalize_network();
 
 	WHBLogConsoleFree();

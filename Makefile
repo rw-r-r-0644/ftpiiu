@@ -16,7 +16,7 @@ INCLUDES	:=
 COMMFLAGS	:=	-O2 -D_GNU_SOURCE
 CFLAGS		+=	$(COMMFLAGS) $(INCLUDES)
 CXXFLAGS	+=	$(COMMFLAGS) $(INCLUDES)
-LDFLAGS		+=	$(WUT_NEWLIB_LDFLAGS) $(WUT_STDCPP_LDFLAGS) \
+LDFLAGS		+=	$(WUT_NEWLIB_LDFLAGS) $(WUT_STDCPP_LDFLAGS) $(WUT_DEVOPTAB_LDFLAGS) \
 				-lcoreinit -lsysapp -lnn_ac -lnsysnet -lproc_ui -lwhb
 
 #---------------------------------------------------------------------------------

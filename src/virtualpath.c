@@ -33,41 +33,6 @@
 uint8_t MAX_VIRTUAL_PARTITIONS = 0;
 VIRTUAL_PARTITION * VIRTUAL_PARTITIONS = NULL;
 
-void VirtualMountDevice(const char * path)
-{
-	if(!path)
-		return;
-
-	int i = 0;
-	char name[255];
-	char alias[255];
-	char prefix[255];
-	bool namestop = false;
-
-	alias[0] = '/';
-
-	do
-	{
-		if(path[i] == ':')
-			namestop = true;
-
-		if(!namestop)
-		{
-			name[i] = path[i];
-			name[i+1] = '\0';
-			alias[i+1] = path[i];
-			alias[i+2] = '\0';
-		}
-
-		prefix[i] = path[i];
-		prefix[i+1] = '\0';
-		i++;
-	}
-	while(path[i-1] != '/');
-
-	AddVirtualPath(name, alias, prefix);
-}
-
 void AddVirtualPath(const char *name, const char *alias, const char *prefix)
 {
 	if(!VIRTUAL_PARTITIONS)
@@ -93,7 +58,7 @@ void AddVirtualPath(const char *name, const char *alias, const char *prefix)
 
 void MountVirtualDevices()
 {
-	VirtualMountDevice("sd:/");
+	AddVirtualPath("sd", "/sd", "fs:/vol/external01/");
 }
 
 void UnmountVirtualPaths()

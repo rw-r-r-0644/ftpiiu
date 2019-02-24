@@ -321,7 +321,7 @@ static int32_t ftp_PASV(client_t *client, char *rest UNUSED) {
 	uint32_t ip = network_gethostip();
 	struct in_addr addr;
 	addr.s_addr = ip;
-	console_printf("Listening for data connections at %s:%lu...\n", inet_ntoa(addr), port);
+	console_printf("[--] Listening for data connections at %s:%lu...\n", inet_ntoa(addr), port);
 	snprintf(reply, sizeof(reply), "Entering Passive Mode (%lu,%lu,%lu,%lu,%"PRIu16",%"PRIu16").", (ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff, (port >> 8) & 0xff, port & 0xff);
 	return write_reply(client, 227, reply);
 }
@@ -341,7 +341,7 @@ static int32_t ftp_PORT(client_t *client, char *portspec) {
 	uint16_t port = ((p1 &0xff) << 8) | (p2 & 0xff);
 	client->address.sin_addr = sin_addr;
 	client->address.sin_port = htons(port);
-	console_printf("Set client address to %s:%lu\n", addr_str, port);
+	console_printf("[--] Set client address to %s:%lu\n", addr_str, port);
 	return write_reply(client, 200, "PORT command successful.");
 }
 
@@ -363,13 +363,13 @@ static int32_t prepare_data_connection_active(client_t *client, data_connection_
 	}
 
 	client->data_socket = data_socket;
-	console_printf("Attempting to connect to client at %s:%lu\n", inet_ntoa(client->address.sin_addr), client->address.sin_port);
+	console_printf("[--] Attempting to connect to client at %s:%lu\n", inet_ntoa(client->address.sin_addr), client->address.sin_port);
 	return 0;
 }
 
 static int32_t prepare_data_connection_passive(client_t *client, data_connection_callback callback UNUSED, void *arg UNUSED) {
 	client->data_socket = client->passive_socket;
-	console_printf("Waiting for data connections...\n");
+	console_printf("[--] Waiting for data connections...\n");
 	return 0;
 }
 
@@ -715,7 +715,7 @@ static void cleanup_client(client_t *client) {
 	}
 	free(client);
 	num_clients--;
-	console_printf("Client disconnected.\n");
+	console_printf("[--] Client disconnected.\n");
 }
 
 void cleanup_ftp() {
@@ -735,21 +735,21 @@ static bool process_accept_events(int32_t server) {
 	int32_t addrlen = sizeof(client_address);
 	while ((peer = network_accept(server, (struct sockaddr *)&client_address, &addrlen)) != -EAGAIN) {
 		if (peer < 0) {
-			console_printf("Error accepting connection: [%i] %s\n", -peer, strerror(-peer));
+			console_printf("[!!] Error accepting connection: [%i] %s\n", -peer, strerror(-peer));
 			return false;
 		}
 
-		console_printf("Accepted connection from %s!\n", inet_ntoa(client_address.sin_addr));
+		console_printf("[--] Accepted connection from %s!\n", inet_ntoa(client_address.sin_addr));
 
 		if (num_clients == MAX_CLIENTS) {
-			console_printf("Maximum of %lu clients reached, not accepting client.\n", MAX_CLIENTS);
+			console_printf("[!!] Maximum of %lu clients reached, not accepting client.\n", MAX_CLIENTS);
 			network_close(peer);
 			return true;
 		}
 
 		client_t *client = malloc(sizeof(client_t));
 		if (!client) {
-			console_printf("Could not allocate memory for client state, not accepting client.\n");
+			console_printf("[!!] Could not allocate memory for client state, not accepting client.\n");
 			network_close(peer);
 			return true;
 		}
@@ -770,7 +770,7 @@ static bool process_accept_events(int32_t server) {
 		memcpy(&client->address, &client_address, sizeof(client_address));
 		int client_index;
 		if (write_reply(client, 220, "ftpii") < 0) {
-			console_printf("Error writing greeting.\n");
+			console_printf("[!!] Error writing greeting.\n");
 			network_close_blocking(peer);
 			free(client);
 		} else {
@@ -802,7 +802,7 @@ static void process_data_events(client_t *client) {
 				if (result == -EINPROGRESS || result == -EALREADY) result = -EAGAIN;
 				if ((result != -EAGAIN) && (result != -EISCONN))
 				{
-				    console_printf("Unable to connect to client: [%i] %s\n", -result, strerror(-result));
+				    console_printf("[!!] Unable to connect to client: [%i] %s\n", -result, strerror(-result));
 				}
 			}
 			 if (result >= 0 || result == -EISCONN) {
@@ -811,10 +811,10 @@ static void process_data_events(client_t *client) {
 		}
 		if (client->data_connection_connected) {
 			result = 1;
-			console_printf("Connected to client!  Transferring data...\n");
+			console_printf("[--] Connected to client!  Transferring data...\n");
 		} else if (OSGetTick() > client->data_connection_timer) {
 			result = -2;
-			console_printf("Timed out waiting for data connection.\n");
+			console_printf("[!!] Timed out waiting for data connection.\n");
 		}
 	} else {
 		result = client->data_callback(client->data_socket, client->data_connection_callback_arg);
@@ -842,7 +842,7 @@ static void process_control_events(client_t *client) {
 		char *offset_buf = client->buf + client->offset;
 		if ((bytes_read = network_read(client->socket, offset_buf, FTP_BUFFER_SIZE - 1 - client->offset)) < 0) {
 			if (bytes_read != -EAGAIN) {
-				console_printf("Read error %i occurred, closing client.\n", bytes_read);
+				console_printf("[!!] Read error %i occurred, closing client.\n", bytes_read);
 				goto recv_loop_end;
 			}
 			return;
@@ -853,7 +853,7 @@ static void process_control_events(client_t *client) {
 		client->buf[client->offset] = '\0';
 
 		if (strchr(offset_buf, '\0') != (client->buf + client->offset)) {
-			console_printf("Received a null byte from client, closing connection ;-)\n"); // i have decided this isn't allowed =P
+			console_printf("[--] Received a null byte from client, closing connection ;-)\n"); // i have decided this isn't allowed =P
 			goto recv_loop_end;
 		}
 
@@ -862,7 +862,7 @@ static void process_control_events(client_t *client) {
 		for (next = client->buf; (end = strstr(next, CRLF)) && !client->data_callback; next = end + CRLF_LENGTH) {
 			*end = '\0';
 			if (strchr(next, '\n')) {
-				console_printf("Received a line-feed from client without preceding carriage return, closing connection ;-)\n"); // i have decided this isn't allowed =P
+				console_printf("[--] Received a line-feed from client without preceding carriage return, closing connection ;-)\n"); // i have decided this isn't allowed =P
 				goto recv_loop_end;
 			}
 
@@ -870,7 +870,7 @@ static void process_control_events(client_t *client) {
 				int32_t result;
 				if ((result = process_command(client, next)) < 0) {
 					if (result != -EQUIT) {
-						console_printf("Closing connection due to error while processing command: %s\n", next);
+						console_printf("[!!] Closing connection due to error while processing command: %s\n", next);
 					}
 					goto recv_loop_end;
 				}
@@ -885,7 +885,7 @@ static void process_control_events(client_t *client) {
 			memcpy(client->buf, tmp_buf, client->offset);
 		}
 	}
-	console_printf("Received line longer than %lu bytes, closing client.\n", FTP_BUFFER_SIZE - 1);
+	console_printf("[!!] Received line longer than %lu bytes, closing client.\n", FTP_BUFFER_SIZE - 1);
 
 	recv_loop_end:
 	cleanup_client(client);

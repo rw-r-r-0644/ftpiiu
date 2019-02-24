@@ -43,7 +43,10 @@ int main()
 	initialise_network();
 	MountVirtualDevices();
 
-    console_printf("FTPiiU v0.5 is listening on %u.%u.%u.%u:%i", (network_gethostip() >> 24) & 0xFF, (network_gethostip() >> 16) & 0xFF, (network_gethostip() >> 8) & 0xFF, (network_gethostip() >> 0) & 0xFF, PORT);
+	console_printf(VERSION_STRING);
+
+	uint32_t ip = network_gethostip();
+    console_printf("Listening on %u.%u.%u.%u:%i", (ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF, PORT);
 
     int serverSocket = create_server(PORT);
 	int network_down = 0;

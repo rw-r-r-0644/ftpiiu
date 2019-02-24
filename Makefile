@@ -8,42 +8,50 @@ VPATH	:= $(BASEDIR)
 #---------------------------------------------------------------------------------
 TARGET		:=	ftpiiu
 SOURCES		:=	src
-INCLUDES	:=	
+INCLUDES	:=	include
 
 #---------------------------------------------------------------------------------
-# options for code generation
+# version
 #---------------------------------------------------------------------------------
-COMMFLAGS	:=	-O2 -D_GNU_SOURCE
-CFLAGS		+=	$(COMMFLAGS) $(INCLUDES)
-CXXFLAGS	+=	$(COMMFLAGS) $(INCLUDES)
-LDFLAGS		+=	$(WUT_NEWLIB_LDFLAGS) $(WUT_STDCPP_LDFLAGS) $(WUT_DEVOPTAB_LDFLAGS) \
+VERSION_MAJOR	:=	0
+VERSION_MINOR	:=	5
+GITREV			:=	$(shell git rev-parse HEAD 2>/dev/null | cut -c1-8)
+VERSION			:=	$(VERSION_MAJOR).$(VERSION_MINOR)-$(GITREV)
+
+#---------------------------------------------------------------------------------
+# build flags
+#---------------------------------------------------------------------------------
+CFLAGS		+=	-O2 -D_GNU_SOURCE -DVERSION_STRING="\"FTPiiU v$(VERSION)\""
+
+#---------------------------------------------------------------------------------
+# wut libraries
+#---------------------------------------------------------------------------------
+LDFLAGS		+=	$(WUT_NEWLIB_LDFLAGS) $(WUT_DEVOPTAB_LDFLAGS) \
 				-lcoreinit -lsysapp -lnn_ac -lnsysnet -lproc_ui -lwhb
 
 #---------------------------------------------------------------------------------
-# get a list of objects
+# includes
 #---------------------------------------------------------------------------------
-CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
-SFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
-OBJECTS		:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+CFLAGS		+=	$(foreach dir,$(INCLUDES),-I$(dir))
 
 #---------------------------------------------------------------------------------
-# objectives
+# generate a list of objects
 #---------------------------------------------------------------------------------
+CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
+OBJECTS		+=	$(CFILES:.c=.o)
+
+#---------------------------------------------------------------------------------
+# targets
+#--------------------------------------------------------------------------------
 $(TARGET).rpx: $(OBJECTS)
 
 clean:
-	rm -rf $(TARGET).rpx $(TARGET).rpx.elf $(OBJECTS) $(OBJECTS:.o=.d)
+	$(info clean ...)
+	@rm -rf $(TARGET).rpx $(OBJECTS) $(OBJECTS:.o=.d)
+
+.PHONY: clean
 
 #---------------------------------------------------------------------------------
 # wut
 #---------------------------------------------------------------------------------
 include $(WUT_ROOT)/share/wut.mk
-
-#---------------------------------------------------------------------------------
-# portlibs
-#---------------------------------------------------------------------------------
-PORTLIBS	:=	$(DEVKITPRO)/portlibs/ppc
-LDFLAGS		+=	-L$(PORTLIBS)/lib
-CFLAGS		+=	-I$(PORTLIBS)/include
-CXXFLAGS	+=	-I$(PORTLIBS)/include

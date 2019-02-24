@@ -14,7 +14,7 @@ INCLUDES	:=	include
 # version
 #---------------------------------------------------------------------------------
 VERSION_MAJOR	:=	0
-VERSION_MINOR	:=	5
+VERSION_MINOR	:=	6
 GITREV			:=	$(shell git rev-parse HEAD 2>/dev/null | cut -c1-8)
 VERSION			:=	$(VERSION_MAJOR).$(VERSION_MINOR)-$(GITREV)
 

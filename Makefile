@@ -14,7 +14,7 @@ INCLUDES	:=	include
 # version
 #---------------------------------------------------------------------------------
 VERSION_MAJOR	:=	0
-VERSION_MINOR	:=	6
+VERSION_MINOR	:=	7
 GITREV			:=	$(shell git rev-parse HEAD 2>/dev/null | cut -c1-8)
 VERSION			:=	$(VERSION_MAJOR).$(VERSION_MINOR)-$(GITREV)
 
@@ -42,12 +42,29 @@ OBJECTS		+=	$(CFILES:.c=.o)
 
 #---------------------------------------------------------------------------------
 # targets
-#--------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
 $(TARGET).rpx: $(OBJECTS)
 
-clean:
+clean: clean_channel
 	$(info clean ...)
 	@rm -rf $(TARGET).rpx $(OBJECTS) $(OBJECTS:.o=.d)
+
+#---------------------------------------------------------------------------------
+# channel targets
+#---------------------------------------------------------------------------------
+install_channel: $(TARGET).rpx NUSPacker.jar encryptKeyWith
+	@cp $(TARGET).rpx channel/code/
+	java -jar NUSPacker.jar -in "channel" -out "install_channel"
+
+NUSPacker.jar:
+	wget https://bitbucket.org/timogus/nuspacker/downloads/NUSPacker.jar
+
+encryptKeyWith:
+	@echo "Missing common key file \"encryptKeyWith\"! Insert the common key as string into \"encryptKeyWith\" file in the HBL Makefile path!"
+	@exit 1
+
+clean_channel:
+	@rm -rf install_channel NUSPacker.jar fst.bin output tmp channel/code/$(TARGET).rpx
 
 .PHONY: clean
 

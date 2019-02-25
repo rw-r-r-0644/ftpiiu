@@ -33,7 +33,6 @@ misrepresented as being the original software.
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 #include <nsysnet/socket.h>
-#include <whb/libmanager.h>
 #include <nn/ac.h>
 
 #ifndef SO_TCPSACK
@@ -67,12 +66,12 @@ void initialise_network()
     ACConnectWithConfigId(nn_startupid);
     ACGetAssignedAddress(&hostIpAddress);
 
-	WHBInitializeSocketLibrary();
+	socket_lib_init();
 }
 
 void finalize_network()
 {
-	WHBDeinitializeSocketLibrary();
+	socket_lib_finish();
 }
 
 int getsocketerrno()

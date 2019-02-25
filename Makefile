@@ -27,7 +27,7 @@ CFLAGS		+=	-O2 -D_GNU_SOURCE -DVERSION_STRING="\"FTPiiU v$(VERSION)\""
 # wut libraries
 #---------------------------------------------------------------------------------
 LDFLAGS		+=	$(WUT_NEWLIB_LDFLAGS) $(WUT_DEVOPTAB_LDFLAGS) \
-				-lcoreinit -lsysapp -lnn_ac -lnsysnet -lproc_ui -lwhb
+				-lcoreinit -lsysapp -lnn_ac -lnsysnet -lproc_ui
 
 #---------------------------------------------------------------------------------
 # includes

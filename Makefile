@@ -1,74 +1,144 @@
-BASEDIR	:= $(dir $(firstword $(MAKEFILE_LIST)))
-VPATH	:= $(BASEDIR)
+#-------------------------------------------------------------------------------
+.SUFFIXES:
+#-------------------------------------------------------------------------------
 
-#---------------------------------------------------------------------------------
+ifeq ($(strip $(DEVKITPRO)),)
+$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
+endif
+
+TOPDIR ?= $(CURDIR)
+
+include $(DEVKITPRO)/wut/share/wut_rules
+
+#-------------------------------------------------------------------------------
 # TARGET is the name of the output
+# BUILD is the directory where object files & intermediate files will be placed
 # SOURCES is a list of directories containing source code
+# DATA is a list of directories containing data files
 # INCLUDES is a list of directories containing header files
-#---------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 TARGET		:=	ftpiiu
+BUILD		:=	build
 SOURCES		:=	src
+DATA		:=	data
 INCLUDES	:=	include
 
-#---------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # version
-#---------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 VERSION_MAJOR	:=	0
 VERSION_MINOR	:=	7
 GITREV			:=	$(shell git rev-parse HEAD 2>/dev/null | cut -c1-8)
 VERSION			:=	$(VERSION_MAJOR).$(VERSION_MINOR)-$(GITREV)
 
-#---------------------------------------------------------------------------------
-# build flags
-#---------------------------------------------------------------------------------
-CFLAGS		+=	-O2 -D_GNU_SOURCE -DVERSION_STRING="\"FTPiiU v$(VERSION)\""
+#-------------------------------------------------------------------------------
+# options for code generation
+#-------------------------------------------------------------------------------
+CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
+			$(MACHDEP)
+CFLAGS	+=	-D_GNU_SOURCE -DVERSION_STRING="\"FTPiiU v$(VERSION)\""
 
-#---------------------------------------------------------------------------------
-# wut libraries
-#---------------------------------------------------------------------------------
-LDFLAGS		+=	$(WUT_NEWLIB_LDFLAGS) $(WUT_DEVOPTAB_LDFLAGS) \
-				-lcoreinit -lsysapp -lnn_ac -lnsysnet -lproc_ui
+CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__
 
-#---------------------------------------------------------------------------------
-# includes
-#---------------------------------------------------------------------------------
-CFLAGS		+=	$(foreach dir,$(INCLUDES),-I$(dir))
+CXXFLAGS	:= $(CFLAGS)
 
-#---------------------------------------------------------------------------------
-# generate a list of objects
-#---------------------------------------------------------------------------------
-CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
-OBJECTS		+=	$(CFILES:.c=.o)
+ASFLAGS	:=	-g $(ARCH)
+LDFLAGS	=	-g $(ARCH) $(RPXSPECS) -Wl,-Map,$(notdir $*.map)
 
-#---------------------------------------------------------------------------------
-# targets
-#---------------------------------------------------------------------------------
-$(TARGET).rpx: $(OBJECTS)
+LIBS	:= -lwut
 
-clean: clean_channel
-	$(info clean ...)
-	@rm -rf $(TARGET).rpx $(OBJECTS) $(OBJECTS:.o=.d)
+#-------------------------------------------------------------------------------
+# list of directories containing libraries, this must be the top level
+# containing include and lib
+#-------------------------------------------------------------------------------
+LIBDIRS	:= $(PORTLIBS) $(WUT_ROOT)
 
-#---------------------------------------------------------------------------------
-# channel targets
-#---------------------------------------------------------------------------------
-install_channel: $(TARGET).rpx NUSPacker.jar encryptKeyWith
-	@cp $(TARGET).rpx channel/code/
-	java -jar NUSPacker.jar -in "channel" -out "install_channel"
 
-NUSPacker.jar:
-	wget https://bitbucket.org/timogus/nuspacker/downloads/NUSPacker.jar
+#-------------------------------------------------------------------------------
+# no real need to edit anything past this point unless you need to add additional
+# rules for different file extensions
+#-------------------------------------------------------------------------------
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#-------------------------------------------------------------------------------
 
-encryptKeyWith:
-	@echo "Missing common key file \"encryptKeyWith\"! Insert the common key as string into \"encryptKeyWith\" file in the HBL Makefile path!"
-	@exit 1
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export TOPDIR	:=	$(CURDIR)
 
-clean_channel:
-	@rm -rf install_channel NUSPacker.jar fst.bin output tmp channel/code/$(TARGET).rpx
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
-.PHONY: clean
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
-#---------------------------------------------------------------------------------
-# wut
-#---------------------------------------------------------------------------------
-include $(WUT_ROOT)/share/wut.mk
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
+
+#-------------------------------------------------------------------------------
+# use CXX for linking C++ projects, CC for standard C
+#-------------------------------------------------------------------------------
+ifeq ($(strip $(CPPFILES)),)
+#-------------------------------------------------------------------------------
+	export LD	:=	$(CC)
+#-------------------------------------------------------------------------------
+else
+#-------------------------------------------------------------------------------
+	export LD	:=	$(CXX)
+#-------------------------------------------------------------------------------
+endif
+#-------------------------------------------------------------------------------
+
+export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
+export OFILES_SRC	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES 	:=	$(OFILES_BIN) $(OFILES_SRC)
+export HFILES_BIN	:=	$(addsuffix .h,$(subst .,_,$(BINFILES)))
+
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+			-I$(CURDIR)/$(BUILD)
+
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
+.PHONY: $(BUILD) clean all
+
+#-------------------------------------------------------------------------------
+all: $(BUILD)
+
+$(BUILD):
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+
+#-------------------------------------------------------------------------------
+clean:
+	@echo clean ...
+	@rm -fr $(BUILD) $(TARGET).rpx $(TARGET).elf
+
+#-------------------------------------------------------------------------------
+else
+.PHONY:	all
+
+DEPENDS	:=	$(OFILES:.o=.d)
+
+#-------------------------------------------------------------------------------
+# main targets
+#-------------------------------------------------------------------------------
+all	:	$(OUTPUT).rpx
+
+$(OUTPUT).rpx	:	$(OUTPUT).elf
+$(OUTPUT).elf	:	$(OFILES)
+
+$(OFILES_SRC)	: $(HFILES_BIN)
+
+#-------------------------------------------------------------------------------
+# you need a rule like this for each extension you use as binary data
+#-------------------------------------------------------------------------------
+%.bin.o	%_bin.h :	%.bin
+#-------------------------------------------------------------------------------
+	@echo $(notdir $<)
+	@$(bin2o)
+
+-include $(DEPENDS)
+
+#-------------------------------------------------------------------------------
+endif
+#-------------------------------------------------------------------------------
